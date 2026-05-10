@@ -1,0 +1,20 @@
+{
+  "name": "speedtester-backend",
+  "version": "1.0.0",
+  "description": "Speedtester backend API",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "node-cron": "^3.0.3",
+    "speedtest-net": "^2.1.1"
+  }
+}
