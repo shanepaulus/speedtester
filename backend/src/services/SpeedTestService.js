@@ -6,17 +6,18 @@ const CF_UP    = 'https://speed.cloudflare.com/__up';
 const CF_TRACE = 'https://www.cloudflare.com/cdn-cgi/trace';
 
 export class SpeedTestService {
-  async run(onProgress) {
+  async run(onProgress, durationSeconds = 5) {
     onProgress?.({ phase: 'ping' });
-    const [isp, latency] = await Promise.all([this.#isp(), this.#ping()]);
+    const [trace, latency] = await Promise.all([this.#trace(), this.#ping()]);
     onProgress?.({ phase: 'ping_done', ping: latency.ping, jitter: latency.jitter });
 
     onProgress?.({ phase: 'download', value: 0 });
-    const dl = await this.#download(onProgress);
+    const dl = await this.#download(onProgress, durationSeconds);
 
     onProgress?.({ phase: 'upload', value: 0 });
-    const ul = await this.#upload(onProgress);
+    const ul = await this.#upload(onProgress, durationSeconds);
 
+    const location = [trace.colo, trace.loc].filter(Boolean).join(' · ') || 'Nearest edge';
     return {
       download:        dl,
       upload:          ul,
@@ -24,8 +25,8 @@ export class SpeedTestService {
       jitter:          latency.jitter,
       packet_loss:     0,
       server_name:     'Cloudflare',
-      server_location: 'Nearest edge',
-      isp,
+      server_location: location,
+      isp:             trace.isp,
     };
   }
 
@@ -41,42 +42,77 @@ export class SpeedTestService {
     return { ping: parseFloat(avg.toFixed(2)), jitter: parseFloat(jitter.toFixed(2)) };
   }
 
-  async #download(onProgress) {
-    const size   = 25_000_000;
-    const start  = performance.now();
-    const res    = await fetch(`${CF_DOWN}?bytes=${size}`);
-    let received = 0;
-    const reader = res.body.getReader();
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      received += value.length;
-      const elapsed = (performance.now() - start) / 1000;
-      if (elapsed > 0.1) {
-        onProgress?.({ phase: 'download', value: parseFloat((received * 8 / elapsed / 1_000_000).toFixed(2)) });
+  async #download(onProgress, durationSeconds) {
+    const PARALLEL   = 4;
+    const controller = new AbortController();
+    const timer      = setTimeout(() => controller.abort(), durationSeconds * 1000);
+    const start      = performance.now();
+    let   received   = 0;
+
+    const worker = async () => {
+      try {
+        const res    = await fetch(`${CF_DOWN}?bytes=1000000000`, { signal: controller.signal });
+        const reader = res.body.getReader();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          received += value.length;
+          const elapsed = (performance.now() - start) / 1000;
+          if (elapsed > 0.1) {
+            onProgress?.({ phase: 'download', value: parseFloat((received * 8 / elapsed / 1_000_000).toFixed(2)) });
+          }
+        }
+      } catch (err) {
+        if (err.name !== 'AbortError') throw err;
       }
+    };
+
+    try {
+      await Promise.all(Array.from({ length: PARALLEL }, worker));
+    } finally {
+      clearTimeout(timer);
     }
+
     const elapsed = (performance.now() - start) / 1000;
-    return parseFloat((received * 8 / elapsed / 1_000_000).toFixed(2));
+    return parseFloat((received * 8 / Math.max(elapsed, 0.01) / 1_000_000).toFixed(2));
   }
 
-  async #upload(onProgress) {
-    const data  = randomBytes(10 * 1024 * 1024);
-    const start = performance.now();
-    await fetch(CF_UP, { method: 'POST', body: data, headers: { 'Content-Type': 'application/octet-stream' } });
+  async #upload(onProgress, durationSeconds) {
+    const PARALLEL   = 4;
+    const CHUNK_SIZE = 8 * 1024 * 1024; // 8 MB per request — reduces HTTP overhead on fast connections
+    const chunk      = randomBytes(CHUNK_SIZE);
+    const start      = performance.now();
+    let   totalSent  = 0;
+    let   finished   = false;
+
+    const worker = async () => {
+      while (!finished) {
+        await fetch(CF_UP, {
+          method:  'POST',
+          body:    chunk,
+          headers: { 'Content-Type': 'application/octet-stream' },
+        });
+        totalSent += CHUNK_SIZE;
+        const elapsed = (performance.now() - start) / 1000;
+        onProgress?.({ phase: 'upload', value: parseFloat((totalSent * 8 / elapsed / 1_000_000).toFixed(2)) });
+        if (elapsed >= durationSeconds) finished = true;
+      }
+    };
+
+    await Promise.all(Array.from({ length: PARALLEL }, worker));
+
     const elapsed = (performance.now() - start) / 1000;
-    const ul = parseFloat((data.length * 8 / elapsed / 1_000_000).toFixed(2));
-    onProgress?.({ phase: 'upload', value: ul });
-    return ul;
+    return parseFloat((totalSent * 8 / elapsed / 1_000_000).toFixed(2));
   }
 
-  async #isp() {
+  async #trace() {
     try {
       const res  = await fetch(CF_TRACE);
       const text = await res.text();
-      return text.match(/^org=(.+)$/m)?.[1]?.trim() ?? null;
+      const get  = (key) => text.match(new RegExp(`^${key}=(.+)$`, 'm'))?.[1]?.trim() ?? null;
+      return { isp: get('org'), colo: get('colo'), loc: get('loc') };
     } catch {
-      return null;
+      return { isp: null, colo: null, loc: null };
     }
   }
 }

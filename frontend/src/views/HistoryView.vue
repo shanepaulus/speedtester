@@ -1,51 +1,66 @@
 <template>
-  <div class="page">
-    <div class="history-header">
-      <h2 class="dash-title">History</h2>
-      <span class="badge badge-green" v-if="total > 0">{{ total }} results</span>
+  <div class="max-w-6xl mx-auto px-6 py-8">
+
+    <div class="flex items-center gap-3 mb-6">
+      <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-50">History</h2>
+      <span v-if="total > 0" class="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400">{{ total }} results</span>
     </div>
 
-    <div class="card table-card">
-      <div v-if="loading" class="table-loading">Loading…</div>
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden">
 
-      <div v-else-if="rows.length === 0" class="table-empty">
+      <div v-if="loading" class="py-16 text-center text-sm text-slate-400">Loading…</div>
+
+      <div v-else-if="rows.length === 0" class="py-16 text-center text-sm text-slate-400">
         No results yet. Run your first speed test from the dashboard.
       </div>
 
-      <div v-else class="table-wrap">
-        <table>
+      <div v-else class="overflow-x-auto">
+        <table class="w-full text-sm border-collapse">
           <thead>
-            <tr>
-              <th>Date / Time</th>
-              <th class="num">Download</th>
-              <th class="num">Upload</th>
-              <th class="num">Ping</th>
-              <th class="num">Jitter</th>
-              <th class="num">Loss</th>
-              <th>Server</th>
-              <th>ISP</th>
+            <tr class="border-b border-slate-200 dark:border-slate-800">
+              <th class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400 whitespace-nowrap">Date / Time</th>
+              <th class="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Download</th>
+              <th class="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Upload</th>
+              <th class="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Ping</th>
+              <th class="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Jitter</th>
+              <th class="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Loss</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Server</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">ISP</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="row in rows" :key="row.id">
-              <td class="mono">{{ formatDate(row.timestamp) }}</td>
-              <td class="num" style="color:var(--download)">{{ row.download }} <small>Mbps</small></td>
-              <td class="num" style="color:var(--upload)">{{ row.upload }} <small>Mbps</small></td>
-              <td class="num" style="color:var(--ping)">{{ row.ping.toFixed(1) }} <small>ms</small></td>
-              <td class="num" style="color:var(--jitter)">{{ row.jitter.toFixed(1) }} <small>ms</small></td>
-              <td class="num">{{ row.packet_loss }}%</td>
-              <td>{{ row.server_name ?? '—' }}<br><small>{{ row.server_location ?? '' }}</small></td>
-              <td>{{ row.isp ?? '—' }}</td>
+            <tr
+              v-for="row in rows" :key="row.id"
+              class="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+            >
+              <td class="px-4 py-3 font-mono text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">{{ formatDate(row.timestamp) }}</td>
+              <td class="px-4 py-3 text-right font-semibold tabular-nums text-emerald-500">{{ row.download }} <span class="text-xs font-normal text-slate-400">Mbps</span></td>
+              <td class="px-4 py-3 text-right font-semibold tabular-nums text-blue-500">{{ row.upload }} <span class="text-xs font-normal text-slate-400">Mbps</span></td>
+              <td class="px-4 py-3 text-right font-semibold tabular-nums text-amber-500">{{ row.ping.toFixed(1) }} <span class="text-xs font-normal text-slate-400">ms</span></td>
+              <td class="px-4 py-3 text-right font-semibold tabular-nums text-violet-500">{{ row.jitter.toFixed(1) }} <span class="text-xs font-normal text-slate-400">ms</span></td>
+              <td class="px-4 py-3 text-right tabular-nums text-slate-500 dark:text-slate-400">{{ row.packet_loss }}%</td>
+              <td class="px-4 py-3 text-slate-700 dark:text-slate-300">
+                {{ row.server_name ?? '—' }}
+                <div class="text-xs text-slate-400">{{ row.server_location ?? '' }}</div>
+              </td>
+              <td class="px-4 py-3 text-slate-700 dark:text-slate-300">{{ row.isp ?? '—' }}</td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <div v-if="total > pageSize" class="pagination">
-        <button class="btn-ghost" :disabled="offset === 0" @click="prev">← Prev</button>
+      <div v-if="total > pageSize" class="flex items-center justify-center gap-4 px-4 py-3 border-t border-slate-100 dark:border-slate-800 text-sm text-slate-400">
+        <button
+          class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer bg-transparent text-slate-500 dark:text-slate-400 text-sm"
+          :disabled="offset === 0" @click="prev"
+        >← Prev</button>
         <span>{{ page }} / {{ totalPages }}</span>
-        <button class="btn-ghost" :disabled="offset + pageSize >= total" @click="next">Next →</button>
+        <button
+          class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer bg-transparent text-slate-500 dark:text-slate-400 text-sm"
+          :disabled="offset + pageSize >= total" @click="next"
+        >Next →</button>
       </div>
+
     </div>
   </div>
 </template>
@@ -83,60 +98,3 @@ function formatDate(ts) {
 
 onMounted(load);
 </script>
-
-<style scoped>
-.history-header {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-.dash-title { font-size: 1.5rem; font-weight: 700; }
-
-.table-card { overflow: hidden; }
-.table-wrap { overflow-x: auto; }
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: .85rem;
-}
-thead th {
-  text-align: left;
-  padding: .75rem 1rem;
-  font-size: .72rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: .05em;
-  color: var(--text-muted);
-  border-bottom: 1px solid var(--border);
-  white-space: nowrap;
-}
-thead th.num { text-align: right; }
-tbody tr { border-bottom: 1px solid var(--border); transition: background var(--transition); }
-tbody tr:last-child { border-bottom: none; }
-tbody tr:hover { background: var(--surface-2); }
-tbody td { padding: .75rem 1rem; vertical-align: middle; }
-tbody td.num   { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
-tbody td.mono  { font-family: monospace; font-size: .8rem; white-space: nowrap; }
-tbody td small { font-size: .7rem; font-weight: 400; color: var(--text-muted); }
-
-.table-loading,
-.table-empty {
-  padding: 3rem 1.5rem;
-  text-align: center;
-  color: var(--text-muted);
-  font-size: .9rem;
-}
-
-.pagination {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  padding: .75rem 1rem;
-  border-top: 1px solid var(--border);
-  font-size: .85rem;
-  color: var(--text-muted);
-}
-</style>

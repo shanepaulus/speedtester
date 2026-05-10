@@ -3,6 +3,7 @@ import { authenticate } from '../middleware/authenticate.js';
 import speedTestService from '../services/SpeedTestService.js';
 import storageService from '../services/StorageService.js';
 
+
 const router = Router();
 
 router.post('/run', authenticate, async (req, res) => {
@@ -14,7 +15,8 @@ router.post('/run', authenticate, async (req, res) => {
   const send = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
 
   try {
-    const result = await speedTestService.run(send);
+    const { test_duration_seconds } = storageService.getSettings();
+    const result = await speedTestService.run(send, test_duration_seconds);
     const saved  = storageService.saveResult(result);
     send({ phase: 'done', result: saved });
   } catch (err) {

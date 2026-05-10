@@ -19,7 +19,8 @@ export class SchedulerService {
     }
     this.#task = cron.schedule(schedule, async () => {
       try {
-        const result = await speedTestService.run();
+        const { test_duration_seconds } = storageService.getSettings();
+        const result = await speedTestService.run(null, test_duration_seconds);
         storageService.saveResult(result);
         console.log(`[cron] speed test complete — ${result.download} Mbps ↓ / ${result.upload} Mbps ↑`);
       } catch (err) {

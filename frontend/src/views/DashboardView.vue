@@ -1,50 +1,58 @@
 <template>
-  <div class="page">
+  <div class="max-w-6xl mx-auto px-6 py-8 bg-slate-100 dark:bg-slate-950 min-h-screen">
 
-    <div class="dash-header">
+    <!-- Header -->
+    <div class="flex items-start justify-between mb-6 gap-4">
       <div>
-        <h2 class="dash-title">Dashboard</h2>
-        <p v-if="latest && !store.running" class="dash-sub">Last test: {{ formatDate(latest.timestamp) }}</p>
-        <p v-if="store.running" class="dash-sub running-sub">{{ phaseLabel }}</p>
+        <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-50">Dashboard</h2>
+        <p v-if="latest && !store.running" class="text-xs text-slate-400 mt-1">Last test: {{ formatDate(latest.timestamp) }}</p>
+        <p v-if="store.running" class="text-xs text-blue-400 mt-1">{{ phaseLabel }}</p>
       </div>
-      <button class="btn-primary run-btn" :disabled="store.running" @click="run">
-        <svg v-if="!store.running" width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-          <polygon points="5 3 19 12 5 21 5 3"/>
-        </svg>
-        <span v-if="store.running" class="btn-spinner"></span>
+      <button
+        class="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold transition-colors cursor-pointer border-0 shrink-0"
+        :disabled="store.running" @click="run"
+      >
+        <svg v-if="!store.running" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        <span v-if="store.running" class="w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin"></span>
         {{ store.running ? 'Running…' : 'Run test' }}
       </button>
     </div>
 
     <!-- Live gauge panel -->
     <Transition name="gauge">
-      <div v-if="store.running" class="gauge-panel card">
-        <div class="gauges-row">
+      <div v-if="store.running" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 mb-6 shadow-sm">
+        <div class="flex items-center justify-center gap-12 flex-wrap">
           <SpeedGauge
-            :value="store.phase === 'upload' ? store.liveSpeed : downloadForGauge"
+            :value="gauge.value"
             :max="gaugeMax"
-            :color="store.phase === 'upload' ? 'var(--upload)' : 'var(--download)'"
-            :label="store.phase === 'upload' ? 'Upload' : 'Download'"
+            :color="gauge.color"
+            :label="gauge.label"
             unit="Mbps"
           />
-          <div class="live-meta">
-            <div class="live-stat" v-if="store.livePing != null">
-              <span class="live-label">Ping</span>
-              <span class="live-val" style="color:var(--ping)">{{ store.livePing.toFixed(1) }} <small>ms</small></span>
+          <div class="flex flex-col gap-4">
+            <div v-if="store.livePing != null" class="flex flex-col gap-0.5">
+              <span class="text-xs font-semibold uppercase tracking-widest text-slate-400">Ping</span>
+              <span class="text-2xl font-bold tabular-nums text-amber-400">{{ store.livePing.toFixed(1) }} <small class="text-xs text-slate-400 font-normal">ms</small></span>
             </div>
-            <div class="live-stat" v-if="store.liveJitter != null">
-              <span class="live-label">Jitter</span>
-              <span class="live-val" style="color:var(--jitter)">{{ store.liveJitter.toFixed(1) }} <small>ms</small></span>
+            <div v-if="store.liveJitter != null" class="flex flex-col gap-0.5">
+              <span class="text-xs font-semibold uppercase tracking-widest text-slate-400">Jitter</span>
+              <span class="text-2xl font-bold tabular-nums text-violet-400">{{ store.liveJitter.toFixed(1) }} <small class="text-xs text-slate-400 font-normal">ms</small></span>
             </div>
-            <div class="live-steps">
-              <div class="step" :class="{ done: stepDone('ping'), active: stepActive('ping') }">
-                <span class="step-dot"></span> Ping
-              </div>
-              <div class="step" :class="{ done: stepDone('download'), active: stepActive('download') }">
-                <span class="step-dot"></span> Download
-              </div>
-              <div class="step" :class="{ done: stepDone('upload'), active: stepActive('upload') }">
-                <span class="step-dot"></span> Upload
+            <div class="flex flex-col gap-2 mt-1">
+              <div v-for="step in steps" :key="step.key" class="flex items-center gap-2 text-xs">
+                <span
+                  class="w-2 h-2 rounded-full transition-all duration-300"
+                  :class="{
+                    'bg-blue-500 shadow-[0_0_0_3px_rgba(59,130,246,0.25)]': stepActive(step.key),
+                    'bg-emerald-500': stepDone(step.key),
+                    'bg-slate-700': !stepActive(step.key) && !stepDone(step.key),
+                  }"
+                ></span>
+                <span :class="{
+                  'text-slate-50 font-semibold': stepActive(step.key),
+                  'text-emerald-400': stepDone(step.key),
+                  'text-slate-500': !stepActive(step.key) && !stepDone(step.key),
+                }">{{ step.label }}</span>
               </div>
             </div>
           </div>
@@ -52,48 +60,59 @@
       </div>
     </Transition>
 
-    <div v-if="store.error" class="error-banner">{{ store.error }}</div>
+    <!-- Error -->
+    <div v-if="store.error" class="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-xl px-4 py-3 text-sm text-red-600 dark:text-red-400 mb-6">
+      {{ store.error }}
+    </div>
 
-    <div class="metrics-grid">
+    <!-- Metric cards -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       <MetricCard label="Download" :value="latest?.download" unit="Mbps" color="var(--download)" :sub="latest?.isp ?? ''" />
       <MetricCard label="Upload"   :value="latest?.upload"   unit="Mbps" color="var(--upload)"   />
       <MetricCard label="Ping"     :value="latest?.ping"     unit="ms"   color="var(--ping)"     :sub="latest?.server_location ?? ''" />
       <MetricCard label="Jitter"   :value="latest?.jitter"   unit="ms"   color="var(--jitter)"   />
     </div>
 
-    <div v-if="hasData" class="charts-grid">
+    <!-- Charts -->
+    <div v-if="hasData" class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
       <SpeedChart title="Throughput" :labels="labels" :datasets="throughputDatasets" unit=" Mbps" />
       <SpeedChart title="Latency"    :labels="labels" :datasets="latencyDatasets"    unit=" ms"  />
     </div>
 
-    <CronConfig />
   </div>
 </template>
 
 <script setup>
-import { computed, ref, onMounted } from 'vue';
+import { computed, ref, reactive, watch, onMounted } from 'vue';
 import MetricCard from '../components/MetricCard.vue';
 import SpeedChart from '../components/SpeedChart.vue';
 import SpeedGauge from '../components/SpeedGauge.vue';
-import CronConfig from '../components/CronConfig.vue';
 import { useSpeedTestStore } from '../stores/speedtest.js';
 
 const store = useSpeedTestStore();
-
 const peakDownload = ref(0);
 
 const latest  = computed(() => store.recent[0] ?? null);
 const hasData = computed(() => store.recent.length > 1);
-
 const sorted  = computed(() => [...store.recent].sort((a, b) => a.timestamp.localeCompare(b.timestamp)));
 const labels  = computed(() => sorted.value.map(r => formatLabel(r.timestamp)));
 
-const downloadForGauge = computed(() => {
-  if (store.phase === 'download') {
-    if (store.liveSpeed > peakDownload.value) peakDownload.value = store.liveSpeed;
-    return store.liveSpeed;
+// Frozen gauge state — updates during the test, holds the last value while the
+// panel fades out instead of snapping to 0 when phase/liveSpeed clear in finally.
+const gauge = reactive({ value: 0, color: '#10b981', label: 'Download' });
+
+watch([() => store.phase, () => store.liveSpeed], ([phase, speed]) => {
+  if (!phase || phase === 'done' || phase === 'error') return;
+  if (phase === 'upload') {
+    gauge.color = '#3b82f6';
+    gauge.label = 'Upload';
+    gauge.value = speed;
+  } else if (phase === 'download') {
+    if (speed > peakDownload.value) peakDownload.value = speed;
+    gauge.color = '#10b981';
+    gauge.label = 'Download';
+    gauge.value = speed;
   }
-  return 0;
 });
 
 const gaugeMax = computed(() => {
@@ -104,9 +123,14 @@ const gaugeMax = computed(() => {
 const PHASE_ORDER = ['ping', 'ping_done', 'download', 'upload', 'done'];
 const phaseIndex  = computed(() => PHASE_ORDER.indexOf(store.phase ?? ''));
 
+const steps = [
+  { key: 'ping',     label: 'Ping' },
+  { key: 'download', label: 'Download' },
+  { key: 'upload',   label: 'Upload' },
+];
+
 function stepDone(step) {
-  const map = { ping: 1, download: 3, upload: 4 };
-  return phaseIndex.value > map[step];
+  return phaseIndex.value > ({ ping: 1, download: 3, upload: 4 }[step]);
 }
 function stepActive(step) {
   const map = { ping: 0, download: 2, upload: 3 };
@@ -122,12 +146,12 @@ const phaseLabel = computed(() => ({
 }[store.phase] ?? 'Starting…'));
 
 const throughputDatasets = computed(() => [
-  { label: 'Download', data: sorted.value.map(r => r.download), borderColor: 'var(--download)', backgroundColor: 'rgba(16,185,129,.1)', fill: true, tension: .4, pointRadius: 3 },
-  { label: 'Upload',   data: sorted.value.map(r => r.upload),   borderColor: 'var(--upload)',   backgroundColor: 'rgba(59,130,246,.1)', fill: true, tension: .4, pointRadius: 3 },
+  { label: 'Download', data: sorted.value.map(r => r.download), borderColor: '#10b981', fill: true, tension: .4 },
+  { label: 'Upload',   data: sorted.value.map(r => r.upload),   borderColor: '#3b82f6', fill: true, tension: .4 },
 ]);
 const latencyDatasets = computed(() => [
-  { label: 'Ping',   data: sorted.value.map(r => r.ping),   borderColor: 'var(--ping)',   backgroundColor: 'rgba(245,158,11,.1)',  fill: true, tension: .4, pointRadius: 3 },
-  { label: 'Jitter', data: sorted.value.map(r => r.jitter), borderColor: 'var(--jitter)', backgroundColor: 'rgba(139,92,246,.1)', fill: true, tension: .4, pointRadius: 3 },
+  { label: 'Ping',   data: sorted.value.map(r => r.ping),   borderColor: '#f59e0b', fill: true, tension: .4 },
+  { label: 'Jitter', data: sorted.value.map(r => r.jitter), borderColor: '#8b5cf6', fill: true, tension: .4 },
 ]);
 
 function formatLabel(ts) {
@@ -139,6 +163,7 @@ function formatDate(ts) {
 
 async function run() {
   peakDownload.value = 0;
+  gauge.value = 0; gauge.color = '#10b981'; gauge.label = 'Download';
   await store.runTest();
 }
 
@@ -146,96 +171,6 @@ onMounted(() => store.fetchRecent(50));
 </script>
 
 <style scoped>
-.dash-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  margin-bottom: 1.5rem;
-  gap: 1rem;
-}
-.dash-title  { font-size: 1.5rem; font-weight: 700; }
-.dash-sub    { font-size: .82rem; color: var(--text-muted); margin-top: .25rem; }
-.running-sub { color: var(--accent); }
-.run-btn     { display: flex; align-items: center; gap: .4rem; padding: .55rem 1.25rem; white-space: nowrap; }
-
-/* Gauge panel */
-.gauge-panel {
-  padding: 1.5rem 2rem;
-  margin-bottom: 1.5rem;
-  background: var(--surface);
-}
-.gauges-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 3rem;
-  flex-wrap: wrap;
-}
-.live-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-.live-stat  { display: flex; flex-direction: column; gap: .15rem; }
-.live-label { font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
-.live-val   { font-size: 1.4rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-.live-val small { font-size: .7rem; color: var(--text-muted); font-weight: 400; }
-
-.live-steps { display: flex; flex-direction: column; gap: .5rem; }
-.step {
-  display: flex;
-  align-items: center;
-  gap: .5rem;
-  font-size: .82rem;
-  color: var(--text-muted);
-}
-.step-dot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: var(--border);
-  transition: background .3s;
-}
-.step.active .step-dot { background: var(--accent); box-shadow: 0 0 0 3px rgba(96,165,250,.25); }
-.step.done   .step-dot { background: var(--download); }
-.step.active { color: var(--text); font-weight: 600; }
-.step.done   { color: var(--download); }
-
-/* Gauge enter/leave */
 .gauge-enter-active, .gauge-leave-active { transition: opacity .3s, transform .3s; }
 .gauge-enter-from, .gauge-leave-to       { opacity: 0; transform: translateY(-8px); }
-
-.error-banner {
-  background: #fee2e2;
-  border: 1px solid var(--danger);
-  border-radius: var(--radius);
-  padding: .85rem 1.25rem;
-  color: var(--danger);
-  font-size: .875rem;
-  margin-bottom: 1.5rem;
-}
-:root.dark .error-banner { background: #450a0a; }
-
-.metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-.charts-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-@media (max-width: 768px) { .charts-grid { grid-template-columns: 1fr; } }
-
-.btn-spinner {
-  width: 14px; height: 14px;
-  border: 2px solid rgba(255,255,255,.4);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: spin .6s linear infinite;
-  flex-shrink: 0;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
 </style>

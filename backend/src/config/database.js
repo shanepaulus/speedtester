@@ -36,6 +36,13 @@ db.exec(`
   );
 
   INSERT OR IGNORE INTO cron_config (id, schedule, enabled) VALUES (1, '0 * * * *', 0);
+
+  CREATE TABLE IF NOT EXISTS settings (
+    id                    INTEGER PRIMARY KEY CHECK (id = 1),
+    test_duration_seconds INTEGER NOT NULL DEFAULT 5
+  );
+
+  INSERT OR IGNORE INTO settings (id, test_duration_seconds) VALUES (1, 5);
 `);
 
 export default db;

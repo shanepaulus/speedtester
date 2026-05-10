@@ -1,46 +1,49 @@
 <template>
-  <div class="card cron-card">
-    <div class="cron-header">
-      <span class="section-title">Scheduled Tests</span>
-      <label class="toggle">
-        <input type="checkbox" v-model="form.enabled" @change="save" />
-        <span class="toggle-track"></span>
+  <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
+    <div class="flex items-center justify-between mb-4">
+      <span class="text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">Scheduled Tests</span>
+      <label class="relative inline-flex items-center cursor-pointer">
+        <input v-model="form.enabled" type="checkbox" class="sr-only peer" @change="save" />
+        <div class="w-10 h-5 rounded-full bg-slate-200 dark:bg-slate-700 peer-checked:bg-blue-500 transition-colors relative after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-5"></div>
       </label>
     </div>
 
-    <div class="cron-body">
-      <div class="preset-list">
+    <div class="flex flex-col gap-3">
+      <div class="flex flex-wrap gap-2">
         <button
-          v-for="p in presets"
-          :key="p.value"
-          class="preset-btn"
-          :class="{ active: form.schedule === p.value }"
+          v-for="p in presets" :key="p.value"
+          class="px-3 py-1 rounded-full text-xs font-medium border transition-colors cursor-pointer"
+          :class="form.schedule === p.value
+            ? 'bg-blue-50 dark:bg-blue-950 border-blue-400 dark:border-blue-600 text-blue-600 dark:text-blue-400'
+            : 'bg-transparent border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-blue-400 hover:text-blue-500'"
           @click="selectPreset(p.value)"
-        >
-          {{ p.label }}
-        </button>
+        >{{ p.label }}</button>
       </div>
 
-      <div class="cron-input-row">
+      <div class="flex gap-2">
         <input
           v-model="form.schedule"
           placeholder="cron expression e.g. 0 * * * *"
           spellcheck="false"
+          class="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm font-mono text-slate-900 dark:text-slate-50 outline-none focus:border-blue-500 transition-colors"
           @input="scheduleError = ''"
         />
-        <button class="btn-primary" :disabled="saving" @click="save">
-          {{ saving ? 'Saving…' : 'Apply' }}
-        </button>
+        <button
+          :disabled="saving"
+          class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium transition-colors cursor-pointer border-0"
+          @click="save"
+        >{{ saving ? 'Saving…' : 'Apply' }}</button>
       </div>
 
-      <p v-if="scheduleError" class="cron-error">{{ scheduleError }}</p>
+      <p v-if="scheduleError" class="text-xs text-red-500">{{ scheduleError }}</p>
 
-      <p v-if="config" class="cron-status">
+      <p v-if="config" class="text-xs text-slate-400 dark:text-slate-500">
         Status:
-        <span :class="config.enabled ? 'badge badge-green' : 'badge badge-red'">
-          {{ config.enabled ? 'Active' : 'Paused' }}
-        </span>
-        &nbsp;·&nbsp; Next run based on: <code>{{ config.schedule }}</code>
+        <span
+          class="inline-block px-1.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide"
+          :class="config.enabled ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400' : 'bg-red-100 dark:bg-red-950 text-red-600 dark:text-red-400'"
+        >{{ config.enabled ? 'Active' : 'Paused' }}</span>
+        &nbsp;·&nbsp; <code class="font-mono bg-slate-100 dark:bg-slate-800 px-1 rounded">{{ config.schedule }}</code>
       </p>
     </div>
   </div>
@@ -88,57 +91,3 @@ async function save() {
 
 onMounted(load);
 </script>
-
-<style scoped>
-.cron-card   { padding: 1.25rem 1.5rem; }
-.cron-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
-.cron-body   { display: flex; flex-direction: column; gap: .75rem; }
-
-.preset-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .4rem;
-}
-.preset-btn {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  padding: .3rem .75rem;
-  font-size: .8rem;
-  border-radius: 99px;
-}
-.preset-btn:hover  { border-color: var(--accent); color: var(--accent); }
-.preset-btn.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
-
-.cron-input-row {
-  display: flex;
-  gap: .5rem;
-}
-.cron-input-row input { flex: 1; font-family: monospace; }
-
-.cron-error  { font-size: .8rem; color: var(--danger); }
-.cron-status { font-size: .8rem; color: var(--text-muted); }
-.cron-status code { font-family: monospace; background: var(--surface-2); padding: .1rem .3rem; border-radius: 4px; }
-
-.toggle { position: relative; display: inline-flex; align-items: center; cursor: pointer; }
-.toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
-.toggle-track {
-  width: 40px;
-  height: 22px;
-  background: var(--border);
-  border-radius: 99px;
-  transition: background var(--transition);
-  position: relative;
-}
-.toggle-track::after {
-  content: '';
-  position: absolute;
-  top: 3px; left: 3px;
-  width: 16px; height: 16px;
-  background: #fff;
-  border-radius: 50%;
-  transition: transform var(--transition);
-}
-.toggle input:checked ~ .toggle-track              { background: var(--accent); }
-.toggle input:checked ~ .toggle-track::after       { transform: translateX(18px); }
-</style>

@@ -32,6 +32,15 @@ export class StorageService {
     db.prepare('UPDATE cron_config SET schedule = ?, enabled = ? WHERE id = 1').run(schedule, enabled ? 1 : 0);
     return this.getCronConfig();
   }
+
+  getSettings() {
+    return db.prepare('SELECT * FROM settings WHERE id = 1').get();
+  }
+
+  updateSettings({ testDuration }) {
+    db.prepare('UPDATE settings SET test_duration_seconds = ? WHERE id = 1').run(testDuration);
+    return this.getSettings();
+  }
 }
 
 export default new StorageService();

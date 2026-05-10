@@ -1,29 +1,41 @@
 <template>
-  <div class="login-page">
-    <div class="login-card card">
-      <div class="login-logo">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2">
+  <div class="min-h-screen bg-slate-100 dark:bg-slate-950 flex items-center justify-center p-6">
+    <div class="w-full max-w-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl p-8 flex flex-col gap-6">
+
+      <div class="flex items-center justify-center gap-3">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5">
           <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
         </svg>
-        <h1>SpeedTester</h1>
+        <h1 class="text-xl font-bold text-slate-900 dark:text-slate-50">SpeedTester</h1>
       </div>
 
-      <form @submit.prevent="submit">
-        <div class="field">
-          <label>Username</label>
-          <input v-model="username" type="text" placeholder="Enter username" autocomplete="username" required />
-        </div>
-        <div class="field">
-          <label>Password</label>
-          <input v-model="password" type="password" placeholder="Enter password" autocomplete="current-password" required />
+      <form class="flex flex-col gap-4" @submit.prevent="submit">
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Username</label>
+          <input
+            v-model="username" type="text" placeholder="Enter username"
+            autocomplete="username" required
+            class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-900 dark:text-slate-50 outline-none focus:border-blue-500 transition-colors w-full"
+          />
         </div>
 
-        <p v-if="error" class="login-error">{{ error }}</p>
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Password</label>
+          <input
+            v-model="password" type="password" placeholder="Enter password"
+            autocomplete="current-password" required
+            class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-900 dark:text-slate-50 outline-none focus:border-blue-500 transition-colors w-full"
+          />
+        </div>
 
-        <button type="submit" class="btn-primary full-width" :disabled="loading">
-          {{ loading ? 'Signing in…' : 'Sign in' }}
-        </button>
+        <p v-if="error" class="text-xs text-red-500 text-center">{{ error }}</p>
+
+        <button
+          type="submit" :disabled="loading"
+          class="w-full py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold transition-colors cursor-pointer border-0 mt-1"
+        >{{ loading ? 'Signing in…' : 'Sign in' }}</button>
       </form>
+
     </div>
   </div>
 </template>
@@ -50,53 +62,3 @@ async function submit() {
   }
 }
 </script>
-
-<style scoped>
-.login-page {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1.5rem;
-}
-.login-card {
-  width: 100%;
-  max-width: 380px;
-  padding: 2rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-.login-logo {
-  display: flex;
-  align-items: center;
-  gap: .75rem;
-  justify-content: center;
-}
-.login-logo h1 {
-  font-size: 1.4rem;
-  font-weight: 700;
-}
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: .35rem;
-}
-.field label {
-  font-size: .8rem;
-  font-weight: 600;
-  color: var(--text-muted);
-}
-.field input { width: 100%; }
-.full-width  { width: 100%; padding: .65rem 1rem; font-size: .95rem; }
-.login-error {
-  font-size: .8rem;
-  color: var(--danger);
-  text-align: center;
-}
-</style>

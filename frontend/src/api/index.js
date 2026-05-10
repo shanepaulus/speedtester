@@ -58,3 +58,8 @@ export const cronApi = {
   get:    ()               => http.get('/cron'),
   update: (schedule, enabled) => http.put('/cron', { schedule, enabled }),
 };
+
+export const settingsApi = {
+  get:    ()             => http.get('/settings'),
+  update: (testDuration) => http.put('/settings', { testDuration }),
+};
