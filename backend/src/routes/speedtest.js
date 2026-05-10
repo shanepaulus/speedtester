@@ -6,13 +6,22 @@ import storageService from '../services/StorageService.js';
 const router = Router();
 
 router.post('/run', authenticate, async (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const send = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
+
   try {
-    const result = await speedTestService.run();
+    const result = await speedTestService.run(send);
     const saved  = storageService.saveResult(result);
-    res.json(saved);
+    send({ phase: 'done', result: saved });
   } catch (err) {
     console.error('[speedtest] run failed:', err.message);
-    res.status(500).json({ error: 'Speed test failed', detail: err.message });
+    send({ phase: 'error', error: err.message });
+  } finally {
+    res.end();
   }
 });
 

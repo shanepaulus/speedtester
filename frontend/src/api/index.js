@@ -24,9 +24,34 @@ export const authApi = {
 };
 
 export const speedTestApi = {
-  run:     ()                         => http.post('/speedtest/run'),
-  history: (params)                   => http.get('/speedtest/history', { params }),
-  recent:  (count = 50)               => http.get('/speedtest/recent', { params: { count } }),
+  async runStreaming(onEvent) {
+    const token = localStorage.getItem('token');
+    const res   = await fetch('/api/speedtest/run', {
+      method:  'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) throw new Error('Speed test request failed');
+
+    const reader  = res.body.getReader();
+    const decoder = new TextDecoder();
+    let   buffer  = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try { onEvent(JSON.parse(line.slice(6))); } catch {}
+        }
+      }
+    }
+  },
+  history: (params)     => http.get('/speedtest/history', { params }),
+  recent:  (count = 50) => http.get('/speedtest/recent', { params: { count } }),
 };
 
 export const cronApi = {
