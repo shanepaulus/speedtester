@@ -44,6 +44,7 @@ export class SpeedTestService {
 
   async #download(onProgress, durationSeconds) {
     const PARALLEL   = 4;
+    const CHUNK      = 25_000_000; // 25 MB — within Cloudflare's supported range
     const controller = new AbortController();
     const timer      = setTimeout(() => controller.abort(), durationSeconds * 1000);
     const start      = performance.now();
@@ -51,19 +52,21 @@ export class SpeedTestService {
 
     const worker = async () => {
       try {
-        const res    = await fetch(`${CF_DOWN}?bytes=1000000000`, { signal: controller.signal });
-        const reader = res.body.getReader();
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          received += value.length;
-          const elapsed = (performance.now() - start) / 1000;
-          if (elapsed > 0.1) {
-            onProgress?.({ phase: 'download', value: parseFloat((received * 8 / elapsed / 1_000_000).toFixed(2)) });
+        while (!controller.signal.aborted) {
+          const res    = await fetch(`${CF_DOWN}?bytes=${CHUNK}`, { signal: controller.signal });
+          const reader = res.body.getReader();
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            received += value.length;
+            const elapsed = (performance.now() - start) / 1000;
+            if (elapsed > 0.1) {
+              onProgress?.({ phase: 'download', value: parseFloat((received * 8 / elapsed / 1_000_000).toFixed(2)) });
+            }
           }
         }
       } catch (err) {
-        if (err.name !== 'AbortError') throw err;
+        if (!controller.signal.aborted) throw err;
       }
     };
 
